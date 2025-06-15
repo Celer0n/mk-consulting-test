@@ -54,8 +54,8 @@ jobs:
         run: |
           echo "IMAGE_NAME=my-web-app:${{ steps.version.outputs.version }}" > .env
           scp -o StrictHostKeyChecking=no my-web-app-${{ steps.version.outputs.version }}.tar admin@${{ secrets.EC2_HOST }}:/opt/my-web-app-${{ steps.version.outputs.version }}.tar
-          scp -o StrictHostKeyChecking=no docker-compose.yml admin@${{ secrets.EC2_HOST }}:/opt/docker-compose.yml
-          scp -o StrictHostKeyChecking=no .env admin@${{ secrets.EC2_HOST }}:/opt/.env
+          scp -o StrictHostKeyChecking=no docker/docker-compose.yml admin@${{ secrets.EC2_HOST }}:/opt/docker-compose.yml
+          scp -o StrictHostKeyChecking=no docker/default.conf admin@${{ secrets.EC2_HOST }}:/opt/default.conf
 
       # Deploy to EC2
       - name: Deploy to EC2
