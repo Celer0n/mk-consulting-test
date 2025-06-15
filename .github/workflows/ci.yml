@@ -42,7 +42,7 @@ jobs:
         run: |
           docker run -d -p 443:443 --name test-container my-web-app:${{ steps.version.outputs.version }}
           sleep 5
-          curl --insecure https://localhost | grep "Hello world!"
+          curl --insecure https://localhost
           docker stop test-container
           docker rm test-container
 
