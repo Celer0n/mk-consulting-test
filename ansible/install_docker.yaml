@@ -1,0 +1,49 @@
+- name: Install Docker on EC2
+  hosts: ec2_insance
+  become: true
+  tasks:
+    - name: install packages
+      apt:
+        state: present
+        install_recommends: false
+        pkg:
+          - bridge-utils
+          - ca-certificates
+          - curl
+          - gnupg
+        update_cache: true
+
+    - name: get architecture
+      shell: dpkg --print-architecture
+      register: deb_architecture
+
+    - name: get gpg key
+      get_url:
+        url: https://download.docker.com/linux/debian/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: 0644
+        force: true
+
+    - name: add docker apt repository.
+      apt_repository:
+        repo: "deb [arch={{ deb_architecture.stdout }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable"
+        state: present
+        update_cache: yes
+        filename: docker
+
+    - name: install docker and related components
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: latest
+        update_cache: true
+
+    - name: restart Docker 
+      systemd:
+        name: docker
+        state: restarted 
+        masked: no
