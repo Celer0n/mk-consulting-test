@@ -40,7 +40,7 @@ jobs:
       # Download from S3
       - name: Download from S3
         run: |
-          aws s3 cp s3://${{ vars.S3_BUCKET }}/artifacts/my-web-app-${{ steps.version.outputs.version }}.tar my-web-app-${{ steps.version.outputs.version }}.tar
+          aws s3 cp s3://${{ vars.S3_BUCKET }}/artifacts/my-web-app-${{ steps.version.outputs.version }}.tar /opt/my-web-app-${{ steps.version.outputs.version }}.tar
 
       # Install SSH key for EC2
       - name: Install SSH key
@@ -52,8 +52,6 @@ jobs:
       # Copy files to EC2
       - name: Copy files to EC2
         run: |
-          echo "IMAGE_NAME=my-web-app:${{ steps.version.outputs.version }}" > .env
-          scp -o StrictHostKeyChecking=no my-web-app-${{ steps.version.outputs.version }}.tar admin@${{ secrets.EC2_HOST }}:/opt/my-web-app-${{ steps.version.outputs.version }}.tar
           scp -o StrictHostKeyChecking=no docker/docker-compose.yaml admin@${{ secrets.EC2_HOST }}:/opt/docker-compose.yaml
           scp -o StrictHostKeyChecking=no docker/default.conf admin@${{ secrets.EC2_HOST }}:/opt/default.conf
 
