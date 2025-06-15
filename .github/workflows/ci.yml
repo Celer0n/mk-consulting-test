@@ -1,62 +1,65 @@
-name: CI Build and Artifact Upload
+name: CI
 
 on:
   push:
-    branches: [main]
-    paths:
-      - "hello.txt"
-      - "index.html"
-      - "Dockerfile"
-      - ".github/workflows/**"
-
-env:
-  IMAGE_NAME: yourdockerhubuser/mk-web
-  VERSION: ${{ github.run_number }}
-  AWS_REGION: us-east-1
-  S3_BUCKET: your-ci-artifacts-bucket
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch: # Allow manual trigger
 
 jobs:
-  test-and-build:
-    runs-on: ubuntu-latest
+  build-and-upload:
+    runs-on: self-hosted
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v3
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Lint HTML
-      run: |
-        sudo apt-get update && sudo apt-get install tidy -y
-        tidy -e index.html || true  # чтобы просто показать ворнинги
+      # Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Archive static files
-      run: |
-        mkdir artifact
-        cp hello.txt index.html artifact/
-        tar -czf web-page.tar.gz -C artifact .
+      # Extract version from Git tag or use 'latest'
+      - name: Extract version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "version=latest" >> $GITHUB_OUTPUT
+          fi
 
-    - name: Upload artifact to GitHub
-      uses: actions/upload-artifact@v4
-      with:
-        name: web-page-${{ github.run_number }}
-        path: web-page.tar.gz
+      # Build Docker image
+      - name: Build Docker image
+        run: |
+          docker build -t my-web-app:${{ steps.version.outputs.version }} -f docker/Dockerfile .
 
-    - name: Build Docker image
-      run: |
-        docker build -t $IMAGE_NAME:${VERSION} .
+      # Test Docker image
+      - name: Test Docker image
+        run: |
+          docker run -d -p 443:443 --name test-container my-web-app:${{ steps.version.outputs.version }}
+          sleep 5
+          curl --insecure https://localhost | grep "Hello world!"
+          docker stop test-container
+          docker rm test-container
 
-    - name: Login to DockerHub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+      # Save Docker image as tar
+      - name: Save Docker image
+        run: |
+          docker save -o my-web-app-${{ steps.version.outputs.version }}.tar my-web-app:${{ steps.version.outputs.version }}
 
-    - name: Push Docker image
-      run: |
-        docker push $IMAGE_NAME:${VERSION}
+      # Configure AWS credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
 
-    - name: Upload artifact to S3
-      run: |
-        aws s3 cp web-page.tar.gz s3://$S3_BUCKET/artifacts/web-page-${{ github.run_number }}.tar.gz
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      # Upload to S3
+      - name: Upload to S3
+        run: |
+          aws s3 cp my-web-app-${{ steps.version.outputs.version }}.tar s3://${{ vars.S3_BUCKET }}/my-web-app-${{ steps.version.outputs.version }}.tar
