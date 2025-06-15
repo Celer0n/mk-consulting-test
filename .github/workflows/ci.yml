@@ -62,4 +62,4 @@ jobs:
       # Upload to S3
       - name: Upload to S3
         run: |
-          aws s3 cp my-web-app-${{ steps.version.outputs.version }}.tar s3://${{ vars.S3_BUCKET }}/my-web-app-${{ steps.version.outputs.version }}.tar
+          aws s3 cp my-web-app-${{ steps.version.outputs.version }}.tar s3://${{ vars.S3_BUCKET }}/artifacts/my-web-app-${{ steps.version.outputs.version }}.tar
