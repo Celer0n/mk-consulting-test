@@ -55,6 +55,8 @@ jobs:
           scp -o StrictHostKeyChecking=no docker/Dockerfile admin@${{ secrets.EC2_HOST }}:/opt/docker/Dockerfile
           scp -o StrictHostKeyChecking=no docker/docker-compose.yaml admin@${{ secrets.EC2_HOST }}:/opt/docker/docker-compose.yaml
           scp -o StrictHostKeyChecking=no docker/default.conf admin@${{ secrets.EC2_HOST }}:/opt/docker/default.conf
+          scp -o StrictHostKeyChecking=no index.html admin@${{ secrets.EC2_HOST }}:/opt/index.html
+          scp -o StrictHostKeyChecking=no hello.txt admin@${{ secrets.EC2_HOST }}:/opt/hello.txt
 
       # Deploy to EC2
       - name: Deploy to EC2
