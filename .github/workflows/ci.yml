@@ -12,7 +12,9 @@ on:
 jobs:
   build-and-upload:
     runs-on: self-hosted
-
+    permissions:
+      contents: read
+      
     steps:
       # Checkout the repository
       - name: Checkout code
