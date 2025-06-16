@@ -52,9 +52,9 @@ jobs:
       # Copy files to EC2
       - name: Copy files to EC2
         run: |
-          scp -o StrictHostKeyChecking=no docker/Dockerfile admin@${{ secrets.EC2_HOST }}:/opt/Dockerfile
-          scp -o StrictHostKeyChecking=no docker/docker-compose.yaml admin@${{ secrets.EC2_HOST }}:/opt/docker-compose.yaml
-          scp -o StrictHostKeyChecking=no docker/default.conf admin@${{ secrets.EC2_HOST }}:/opt/default.conf
+          scp -o StrictHostKeyChecking=no docker/Dockerfile admin@${{ secrets.EC2_HOST }}:/opt/docker/Dockerfile
+          scp -o StrictHostKeyChecking=no docker/docker-compose.yaml admin@${{ secrets.EC2_HOST }}:/opt/docker/docker-compose.yaml
+          scp -o StrictHostKeyChecking=no docker/default.conf admin@${{ secrets.EC2_HOST }}:/opt/docker/default.conf
 
       # Deploy to EC2
       - name: Deploy to EC2
@@ -64,7 +64,7 @@ jobs:
             # docker load -i /opt/my-web-app-${{ steps.version.outputs.version }}.tar
             
             # Run docker-compose
-            docker-compose --file /opt/docker-compose.yaml up -d
+            docker-compose --file /opt/docker/docker-compose.yaml up -d
             
             # Clean up
             # rm /opt/my-web-app-${{ steps.version.outputs.version }}.tar
