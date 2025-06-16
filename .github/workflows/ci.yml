@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  build-and-upload:
+    runs-on: self-hosted
+    permissions:
+      contents: read
+      
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Extract version from Git tag or use 'latest'
+      - name: Extract version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "version=latest" >> $GITHUB_OUTPUT
+          fi
+
+      # Build Docker image
+      - name: Build Docker image
+        run: |
+          docker build -t my-web-app:${{ steps.version.outputs.version }} -f docker/Dockerfile .
+
+      # Test Docker image
+      - name: Test Docker image
+        run: |
+          docker run -d -p 443:443 --name test-container my-web-app:${{ steps.version.outputs.version }}
+          sleep 5
+          curl --insecure https://localhost
+          docker stop test-container
+          docker rm test-container
+
+      # Save Docker image as tar
+      - name: Save Docker image
+        run: |
+          docker save -o my-web-app-${{ steps.version.outputs.version }}.tar my-web-app:${{ steps.version.outputs.version }}
+
+      # Configure AWS credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # Upload to S3
+      - name: Upload to S3
+        run: |
+          aws s3 cp my-web-app-${{ steps.version.outputs.version }}.tar s3://${{ vars.S3_BUCKET }}/artifacts/my-web-app-${{ steps.version.outputs.version }}.tar
