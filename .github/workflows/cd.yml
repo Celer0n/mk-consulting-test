@@ -1,0 +1,72 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Extract version from Git tag or use 'latest'
+      - name: Extract version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "version=latest" >> $GITHUB_OUTPUT
+          fi
+
+      # Configure AWS credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # Download from S3
+      # - name: Download from S3
+      #   run: |
+      #     aws s3 cp s3://${{ vars.S3_BUCKET }}/artifacts/my-web-app-${{ steps.version.outputs.version }}.tar /opt/my-web-app-${{ steps.version.outputs.version }}.tar
+
+      # Install SSH key for EC2
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          known_hosts: ${{ secrets.EC2_KNOWN_HOSTS }}
+
+      # Copy files to EC2
+      - name: Copy files to EC2
+        run: |
+          scp -o StrictHostKeyChecking=no docker/Dockerfile admin@${{ secrets.EC2_HOST }}:/opt/Dockerfile
+          scp -o StrictHostKeyChecking=no docker/docker-compose.yaml admin@${{ secrets.EC2_HOST }}:/opt/docker-compose.yaml
+          scp -o StrictHostKeyChecking=no docker/default.conf admin@${{ secrets.EC2_HOST }}:/opt/default.conf
+
+      # Deploy to EC2
+      - name: Deploy to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no admin@${{ secrets.EC2_HOST }} << 'EOF'
+            # Load Docker image
+            # docker load -i /opt/my-web-app-${{ steps.version.outputs.version }}.tar
+            
+            # Run docker-compose
+            docker-compose --file /opt/docker-compose.yaml up -d
+            
+            # Clean up
+            # rm /opt/my-web-app-${{ steps.version.outputs.version }}.tar
+            # docker image prune -f
+          EOF
