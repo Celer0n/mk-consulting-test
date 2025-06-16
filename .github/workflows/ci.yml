@@ -42,9 +42,10 @@ jobs:
       # Test Docker image
       - name: Test Docker image
         run: |
+          docker rm -f test-container 2>/dev/null || true
           docker run -d -p 8443:443 --name test-container my-web-app:${{ steps.version.outputs.version }}
           sleep 5
-          curl --insecure https://localhost
+          curl --insecure https://localhost:8443
           docker stop test-container
           docker rm test-container
 
