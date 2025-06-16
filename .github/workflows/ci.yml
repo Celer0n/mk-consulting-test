@@ -14,7 +14,7 @@ jobs:
     runs-on: self-hosted
     permissions:
       contents: read
-      
+
     steps:
       # Checkout the repository
       - name: Checkout code
@@ -42,7 +42,7 @@ jobs:
       # Test Docker image
       - name: Test Docker image
         run: |
-          docker run -d -p 443:443 --name test-container my-web-app:${{ steps.version.outputs.version }}
+          docker run -d -p 8443:443 --name test-container my-web-app:${{ steps.version.outputs.version }}
           sleep 5
           curl --insecure https://localhost
           docker stop test-container
