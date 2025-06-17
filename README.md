@@ -111,3 +111,8 @@ This project implements automated deployment and updating of a simple web page t
 - [x] CI/CD pipeline is running and updating content
 - [x] Public URL is available
 - [x] Changes to `hello.txt` are reflected automatically
+
+## 📦 TODO / Possible improvements
+- Deployment via ECS or EKS
+- Use HTML templating via or `Jinja2`
+- 🔐 Configure Let's Encrypt instead of self-signed certificate to eliminate browser warnings
